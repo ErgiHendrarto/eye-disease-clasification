@@ -233,6 +233,7 @@ if uploaded_file:
                     st.markdown("#### 🎯 Input Summary")
                     st.write(f"**Image:** Uploaded ✓")
                     st.write(f"**Symptoms:** {symptoms_input if symptoms_input else 'None provided'}")
+                    st.write(f"**Severity:** {severity}")
                 
                 with col_b:
                     st.markdown("#### 📈 Top 3 Predictions")
