@@ -136,7 +136,7 @@ st.markdown("""
 
 # Header
 st.markdown('<div class="main-header">👁️ Eye Disease Classification</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Klasifikasi penyakit mata menggunakan Support Vector Machine (SVM). Kami fokus pada feature engineering citra fundus untuk solusi skrining oftalmologis yang ringan dan andal. Memfasilitasi diagnosis cepat dan mendukung pengambilan keputusan klinis.</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Klasifikasi penyakit mata menggunakan Random Forest. Kami fokus pada feature engineering citra fundus untuk solusi skrining oftalmologis yang ringan dan andal. Memfasilitasi diagnosis cepat dan mendukung pengambilan keputusan klinis.</div>', unsafe_allow_html=True)
 
 # Layout
 col1, col2 = st.columns([1, 1])
@@ -159,7 +159,7 @@ with col1:
                  use_container_width=True)
 
 with col2:
-    st.markdown("### 📝 Input Symptoms & Severity")
+    st.markdown("### 📝 Input Symptoms")
     
     # Symptoms input
     st.markdown("#### Symptoms")
@@ -170,13 +170,6 @@ with col2:
         height=100
     )
     
-    # Severity input
-    st.markdown("#### Severity Level")
-    severity = st.selectbox(
-        "Select severity level",
-        ["Mild", "Moderate", "Severe"],
-        help="Choose the severity level of the condition"
-    )
     
     # Info boxes
     st.info("💡 **Tip:** Be as specific as possible with symptoms for better accuracy")
@@ -240,7 +233,6 @@ if uploaded_file:
                     st.markdown("#### 🎯 Input Summary")
                     st.write(f"**Image:** Uploaded ✓")
                     st.write(f"**Symptoms:** {symptoms_input if symptoms_input else 'None provided'}")
-                    st.write(f"**Severity:** {severity}")
                 
                 with col_b:
                     st.markdown("#### 📈 Top 3 Predictions")
@@ -318,7 +310,6 @@ with st.sidebar:
         - Focus on the eye area
         - Avoid blurry or dark photos
         - Provide detailed symptoms
-        - Select appropriate severity
     """)
     
     st.markdown("---")
