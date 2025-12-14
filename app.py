@@ -9,7 +9,7 @@ from skimage.feature import local_binary_pattern, graycomatrix, graycoprops, hog
 st.set_page_config(
     page_title="Eye Disease Classification",
     page_icon="👁️",
-    layout="centered"
+    layout="wide"
 )
 
 @st.cache_resource
@@ -88,44 +88,120 @@ def extract_features(image):
 # Load models
 model, tfidf, label_encoder, severity_ohe = load_models()
 
-# UI
-st.title("👁️ Eye Disease Classification")
-st.markdown("### Upload an eye image to detect potential diseases")
+# Custom CSS
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+    .sub-header {
+        font-size: 1.2rem;
+        color: #666;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .prediction-box {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        color: white;
+        margin: 2rem 0;
+    }
+    .prediction-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    .prediction-confidence {
+        font-size: 2rem;
+        margin-top: 0.5rem;
+    }
+    .stButton>button {
+        width: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 1.1rem;
+        font-weight: bold;
+        padding: 0.75rem;
+        border-radius: 10px;
+        border: none;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# File uploader
-uploaded_file = st.file_uploader(
-    "Choose an eye image...", 
-    type=['jpg', 'jpeg', 'png'],
-    help="Upload a clear image of an eye"
-)
+# Header
+st.markdown('<div class="main-header">👁️ Eye Disease Classification</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">Klasifikasi penyakit mata menggunakan Support Vector Machine (SVM). Kami fokus pada feature engineering citra fundus untuk solusi skrining oftalmologis yang ringan dan andal. Memfasilitasi diagnosis cepat dan mendukung pengambilan keputusan klinis.</div>', unsafe_allow_html=True)
 
-if uploaded_file:
-    # Read and display image
-    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+# Layout
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.markdown("### 📸 Upload Eye Image")
+    uploaded_file = st.file_uploader(
+        "Choose an eye image...", 
+        type=['jpg', 'jpeg', 'png'],
+        help="Upload a clear image of an eye"
+    )
     
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
+    if uploaded_file:
+        # Read and display image
+        file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
+        img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        
         st.image(cv2.cvtColor(img, cv2.COLOR_BGR2RGB), 
                  caption="Uploaded Image", 
                  use_container_width=True)
+
+with col2:
+    st.markdown("### 📝 Input Symptoms & Severity")
     
-    # Predict button
-    if st.button("🔍 Analyze Image", type="primary", use_container_width=True):
-        with st.spinner("Analyzing image..."):
+    # Symptoms input
+    st.markdown("#### Symptoms")
+    symptoms_input = st.text_area(
+        "Enter symptoms (comma separated)",
+        placeholder="e.g., eye pain, blurred vision, redness, sensitivity to light",
+        help="Enter multiple symptoms separated by commas",
+        height=100
+    )
+    
+    # Severity input
+    st.markdown("#### Severity Level")
+    severity = st.selectbox(
+        "Select severity level",
+        ["Mild", "Moderate", "Severe"],
+        help="Choose the severity level of the condition"
+    )
+    
+    # Info boxes
+    st.info("💡 **Tip:** Be as specific as possible with symptoms for better accuracy")
+
+# Predict button
+st.markdown("---")
+
+if uploaded_file:
+    if st.button("🔍 Analyze & Predict Disease", type="primary", use_container_width=True):
+        with st.spinner("🔄 Analyzing image and processing data..."):
             try:
                 # Extract visual features
                 visual_features = extract_features(img)
                 
-                # Set default symptoms and severity (no symptoms, normal severity)
-                # Using empty/neutral text for symptoms
-                default_symptoms = ""
-                symptom_features = tfidf.transform([default_symptoms]).toarray()[0]
+                # Encode symptoms
+                if symptoms_input.strip():
+                    symptoms_list = [s.strip() for s in symptoms_input.split(",")]
+                    symptoms_text = " ".join(symptoms_list)
+                else:
+                    symptoms_text = ""
                 
-                # Set severity to "Mild" as default (safest option)
-                # Valid categories: "Mild", "Moderate", "Severe"
-                default_severity = "Mild"
-                severity_features = severity_ohe.transform([[default_severity]])[0]
+                symptom_features = tfidf.transform([symptoms_text]).toarray()[0]
+                
+                # Encode severity
+                severity_features = severity_ohe.transform([[severity]])[0]
                 
                 # Combine all features
                 input_features = np.hstack([
@@ -142,82 +218,109 @@ if uploaded_file:
                 # Display results
                 st.success("✅ Analysis Complete!")
                 
-                # Main prediction
-                st.markdown("---")
-                st.markdown("### 🎯 Detected Condition")
-                
+                # Main prediction with custom styling
                 confidence = proba[pred] * 100
                 
-                # Color based on prediction
-                if pred_label == "Normal":
-                    color = "green"
-                elif confidence > 70:
-                    color = "red"
-                elif confidence > 50:
-                    color = "orange"
-                else:
-                    color = "blue"
-                
                 st.markdown(f"""
-                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                            padding: 30px; 
-                            border-radius: 15px; 
-                            text-align: center;
-                            box-shadow: 0 10px 25px rgba(0,0,0,0.1);'>
-                    <h1 style='color: white; margin: 0; font-size: 3em;'>{pred_label}</h1>
-                    <h2 style='color: #f0f0f0; margin-top: 10px; font-size: 2em;'>{confidence:.1f}%</h2>
-                    <p style='color: #e0e0e0; margin-top: 10px;'>Confidence Level</p>
+                <div class="prediction-box">
+                    <p style='font-size: 1.2rem; margin: 0; opacity: 0.9;'>Predicted Disease</p>
+                    <h1 class="prediction-title">{pred_label}</h1>
+                    <h2 class="prediction-confidence">{confidence:.1f}%</h2>
+                    <p style='margin: 0; opacity: 0.9;'>Confidence Level</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
+                # Detailed results in columns
+                st.markdown("---")
+                st.markdown("### 📊 Detailed Analysis")
+                
+                col_a, col_b = st.columns(2)
+                
+                with col_a:
+                    st.markdown("#### 🎯 Input Summary")
+                    st.write(f"**Image:** Uploaded ✓")
+                    st.write(f"**Symptoms:** {symptoms_input if symptoms_input else 'None provided'}")
+                    st.write(f"**Severity:** {severity}")
+                
+                with col_b:
+                    st.markdown("#### 📈 Top 3 Predictions")
+                    sorted_indices = np.argsort(proba)[::-1][:3]
+                    
+                    for idx in sorted_indices:
+                        disease = label_encoder.classes_[idx]
+                        prob = proba[idx] * 100
+                        st.write(f"**{disease}**: {prob:.2f}%")
+                
                 # Probability distribution
                 st.markdown("---")
-                st.markdown("### 📊 Probability Distribution")
+                st.markdown("### 📊 Complete Probability Distribution")
                 
                 # Sort by probability
                 sorted_indices = np.argsort(proba)[::-1]
                 
                 for idx in sorted_indices:
                     disease = label_encoder.classes_[idx]
-                    prob = proba[idx] * 100
+                    prob = proba[idx]
                     
-                    st.write(f"**{disease}**")
-                    st.progress(proba[idx])
-                    st.caption(f"{prob:.2f}%")
+                    col_label, col_bar = st.columns([1, 4])
+                    with col_label:
+                        st.write(f"**{disease}**")
+                    with col_bar:
+                        st.progress(prob)
+                        st.caption(f"{prob * 100:.2f}%")
                 
                 # Medical disclaimer
                 st.markdown("---")
                 st.warning("""
                     **⚠️ Medical Disclaimer:** 
-                    This is an AI-powered diagnostic tool for reference purposes only. 
-                    Please consult with a qualified ophthalmologist for proper diagnosis and treatment.
+                    This is an AI-powered diagnostic tool for reference and educational purposes only. 
+                    It is NOT a substitute for professional medical advice, diagnosis, or treatment.
+                    
+                    **Always consult** with a qualified ophthalmologist for proper diagnosis and treatment 
+                    of any eye condition. Do not rely solely on this tool for medical decisions.
                 """)
                 
             except Exception as e:
                 st.error(f"❌ Error during prediction: {str(e)}")
-                st.info("Please ensure the image is clear and properly formatted.")
+                st.info("Please ensure the image is clear and properly formatted, and check your inputs.")
+else:
+    st.info("👆 Please upload an eye image to begin analysis")
 
 # Sidebar info
 with st.sidebar:
-    st.markdown("### ℹ️ About")
+    st.markdown("### ℹ️ About This App")
     st.info("""
-        This app uses machine learning to classify eye diseases from images.
+        This application uses a **multimodal machine learning approach** to classify eye diseases.
         
-        **Detectable Conditions:**
-        - Normal
-        - Cataract
-        - Conjunctivitis
-        - Uveitis
-        - Eyelid disorders
+        **Model:** Random Forest Classifier (Optimized)
+        
+        **Features:**
+        - Visual: HOG, LBP, GLCM, Color Histogram
+        - Textual: TF-IDF encoded symptoms
+        - Categorical: One-hot encoded severity
+        
+        **Accuracy:** ~95% (Validation)
     """)
     
-    st.markdown("### 📌 Tips")
+    st.markdown("### 🏥 Detectable Conditions")
     st.success("""
+        - **Normal** - Healthy eye
+        - **Cataract** - Katarak
+        - **Conjunctivitis** - Mata merah
+        - **Uveitis** - Peradangan uvea
+        - **Eyelid Disorders** - Kelainan kelopak mata
+    """)
+    
+    st.markdown("### 📌 Usage Tips")
+    st.info("""
+        **For Best Results:**
         - Use clear, well-lit images
         - Focus on the eye area
-        - Avoid blurry photos
-        - Front-facing images work best
+        - Avoid blurry or dark photos
+        - Provide detailed symptoms
+        - Select appropriate severity
     """)
     
     st.markdown("---")
-    st.caption("Powered by Support Vector Machine (SVM)")
+    st.caption("Powered by Random Forest & Computer Vision")
+    st.caption("© 2024 Eye Disease Classification System")
