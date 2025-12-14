@@ -15,18 +15,12 @@ st.set_page_config(
 @st.cache_resource
 def load_models():
     try:
-        # Load model utama (Random Forest)
         model = joblib.load('model.pkl')
-        
-        # Load TFIDF untuk symptoms (jika model masih memerlukannya)
         tfidf = joblib.load('tfidf.pkl')
-        
-        # Load Label Encoder
         label_encoder = joblib.load('label_encoder.pkl')
+        severity_ohe = joblib.load('severity_ohe.pkl')
         
-        # severity_ohe SUDAH DIHAPUS
-        
-        return model, tfidf, label_encoder
+        return model, tfidf, label_encoder, severity_ohe
     except Exception as e:
         st.error(f"❌ Error loading models: {str(e)}")
         st.stop()
@@ -92,7 +86,7 @@ def extract_features(image):
     return features
 
 # Load models
-model, tfidf, label_encoder = load_models()
+model, tfidf, label_encoder, severity_ohe = load_models()
 
 # UI
 st.title("👁️ Eye Disease Classification")
@@ -123,17 +117,21 @@ if uploaded_file:
                 # Extract visual features
                 visual_features = extract_features(img)
                 
-                # --- LOGIC UPDATE: Hapus Severity ---
-                
-                # Default symptoms
+                # Set default symptoms and severity (no symptoms, normal severity)
+                # Using empty/neutral text for symptoms
                 default_symptoms = ""
                 symptom_features = tfidf.transform([default_symptoms]).toarray()[0]
                 
-                # Combine features (Visual + Symptoms saja)
-                # Pastikan urutan ini sesuai dengan saat training Random Forest
+                # Set severity to "Mild" as default (safest option)
+                # Valid categories: "Mild", "Moderate", "Severe"
+                default_severity = "Mild"
+                severity_features = severity_ohe.transform([[default_severity]])[0]
+                
+                # Combine all features
                 input_features = np.hstack([
                     visual_features,
-                    symptom_features
+                    symptom_features,
+                    severity_features
                 ])
                 
                 # Predict
@@ -190,13 +188,14 @@ if uploaded_file:
                 # Medical disclaimer
                 st.markdown("---")
                 st.warning("""
-                    **⚠️ Medical Disclaimer:** This is an AI-powered diagnostic tool for reference purposes only. 
+                    **⚠️ Medical Disclaimer:** 
+                    This is an AI-powered diagnostic tool for reference purposes only. 
                     Please consult with a qualified ophthalmologist for proper diagnosis and treatment.
                 """)
                 
             except Exception as e:
                 st.error(f"❌ Error during prediction: {str(e)}")
-                st.info("Please ensure your model is trained without severity input.")
+                st.info("Please ensure the image is clear and properly formatted.")
 
 # Sidebar info
 with st.sidebar:
@@ -221,5 +220,4 @@ with st.sidebar:
     """)
     
     st.markdown("---")
-    # UPDATED: Menampilkan Random Forest
-    st.caption("Powered by Random Forest")
+    st.caption("Powered by Support Vector Machine (SVM)")
