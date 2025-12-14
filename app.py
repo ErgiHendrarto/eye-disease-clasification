@@ -122,8 +122,9 @@ if uploaded_file:
                 default_symptoms = ""
                 symptom_features = tfidf.transform([default_symptoms]).toarray()[0]
                 
-                # Set severity to "None" as default
-                default_severity = "None"
+                # Set severity to "Mild" as default (safest option)
+                # Valid categories: "Mild", "Moderate", "Severe"
+                default_severity = "Mild"
                 severity_features = severity_ohe.transform([[default_severity]])[0]
                 
                 # Combine all features
