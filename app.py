@@ -9,7 +9,7 @@ st.set_page_config(
     page_title="Eye Disease Classification",
     page_icon="👁️",
     layout="centered",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # Custom CSS to enhance UI
